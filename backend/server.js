@@ -9,9 +9,15 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 
+if (!process.env.JWT_SECRET) {
+	console.error('FATAL: JWT_SECRET is not set. Please set JWT_SECRET in your environment.');
+	process.exit(1);
+}
+
 // Middlewares
 app.use(cors());
-app.use(bodyParser.json());
+// Prefer built-in JSON parser
+app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
