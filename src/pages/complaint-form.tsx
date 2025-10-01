@@ -34,13 +34,6 @@ const ComplaintForm = () => {
     "Other"
   ];
 
-  const priorityColors = {
-    low: "text-accent",
-    medium: "text-primary",
-    high: "text-warning",
-    urgent: "text-destructive"
-  };
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -66,25 +59,63 @@ const ComplaintForm = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsLoading(false);
-      const complaintId = `GRP-${Date.now().toString(36).toUpperCase()}`;
-      
-      toast({
-        title: "Complaint Submitted Successfully",
-        description: `Your complaint ID is: ${complaintId}. Save this for tracking.`,
-      });
+    const { title, category, description, priority } = formData;
 
-      // Reset form
-      setFormData({
-        title: "",
-        category: "",
-        description: "",
-        priority: "medium",
-        attachments: []
-      });
-    }, 2000);
+    const requestHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    
+    // If the user is in 'registered' mode, get the token and add it to the request.
+    if (mode === 'registered') {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast({
+                title: "Authentication Error",
+                description: "You must be logged in to submit a registered complaint. Please log in again.",
+                variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+        }
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+        const response = await fetch('/api/complaints', {
+            method: 'POST',
+            headers: requestHeaders,
+            body: JSON.stringify({ title, category, description, priority }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to submit complaint.');
+        }
+
+        toast({
+            title: "Complaint Submitted Successfully",
+            description: `Your complaint ID is: ${data.complaintId}. Save this for tracking.`,
+        });
+
+        // Reset form after successful submission
+        setFormData({
+            title: "",
+            category: "",
+            description: "",
+            priority: "medium",
+            attachments: []
+        });
+
+    } catch (err: any) {
+        toast({
+            title: "Submission Failed",
+            description: err.message || "An unexpected error occurred.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (

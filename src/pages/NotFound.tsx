@@ -8,8 +8,28 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
+    // This function will log the 404 event to the backend
+    const logNotFoundEvent = async () => {
+      try {
+        // Log to the browser console for local debugging
+        console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+
+        // Send the path to the backend for server-side logging
+        await fetch('/api/log/not-found', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path: location.pathname }),
+        });
+      } catch (error) {
+        // If the logging API fails, just log it to the console without disturbing the user.
+        console.error("Failed to log 404 event to the backend:", error);
+      }
+    };
+
+    logNotFoundEvent();
+  }, [location.pathname]); // This effect runs whenever the path changes
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

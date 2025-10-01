@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import GlassCard from "@/components/GlassCard";
@@ -11,8 +12,16 @@ import {
   TrendingUp,
   Eye,
   Lock,
-  Zap
+  Zap,
+  LucideProps
 } from "lucide-react";
+
+// Define a type for our stats object for better type safety
+type Stat = {
+  number: string;
+  label: string;
+  icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
+};
 
 const Home = () => {
   const features = [
@@ -42,12 +51,50 @@ const Home = () => {
     },
   ];
 
-  const stats = [
+  // Map icon names (strings) to actual Lucide components
+  const iconMap = {
+    TrendingUp,
+    Clock,
+    Zap,
+    Eye,
+  };
+
+  // Set initial stats to prevent layout shifts while data is loading
+  const initialStats: Stat[] = [
     { number: "10,000+", label: "Complaints Resolved", icon: TrendingUp },
     { number: "24/7", label: "Portal Availability", icon: Clock },
     { number: "99.9%", label: "System Uptime", icon: Zap },
     { number: "100%", label: "Transparency", icon: Eye },
   ];
+  
+  const [stats, setStats] = useState<Stat[]>(initialStats);
+
+  // useEffect hook to fetch dynamic stats from the backend when the component mounts
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/stats');
+        if (!response.ok) {
+          throw new Error('Failed to fetch stats');
+        }
+        const data = await response.json();
+        
+        // Map the backend data to the format the frontend expects, converting icon names to components
+        const formattedStats = data.map((stat: { iconName: keyof typeof iconMap; number: any; label: any; }) => ({
+          number: stat.number,
+          label: stat.label,
+          icon: iconMap[stat.iconName] || Zap, // Fallback to a default icon
+        }));
+
+        setStats(formattedStats);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+        // If the API fails, the component will just show the initial hardcoded stats
+      }
+    };
+
+    fetchStats();
+  }, []); // The empty dependency array ensures this runs only once when the component mounts
 
   return (
     <div className="min-h-screen">

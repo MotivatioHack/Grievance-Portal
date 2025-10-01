@@ -204,7 +204,6 @@ const TrackComplaint = () => {
 
             <div className="text-sm text-muted-foreground">
               <p className="mb-2">
-                <strong>Demo:</strong> Use complaint ID "GRP-ABC123" to see a sample tracking result
               </p>
               <p>
                 Your complaint ID was provided when you submitted your complaint. Check your email or saved confirmation.

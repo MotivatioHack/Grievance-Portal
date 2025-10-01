@@ -1,30 +1,63 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import GlassCard from "@/components/GlassCard";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import GlassCard from "../components/GlassCard";
 import { Shield, Mail, Lock, ArrowRight } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "../hooks/use-toast";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
+      }
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('userRole', data.role);
+
       toast({
         title: "Login Successful",
-        description: "Welcome back to GrievancePortal!",
+        description: "Welcome back!",
       });
-    }, 2000);
+
+      if (data.role === 'admin') {
+        navigate('/admin-dashboard');
+      } else {
+        // --- THIS IS THE CORRECTED LINE ---
+        // Changed from '/complaint-form' to the correct route '/complaint'
+        navigate('/complaint'); 
+      }
+
+    } catch (err: any) {
+      toast({
+        title: "Login Failed",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -114,12 +147,12 @@ const Login = () => {
               className="w-full bg-gradient-primary hover:shadow-neon transition-all duration-300 py-6 text-lg"
             >
               {isLoading ? (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-2">
                   <div className="w-4 h-4 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin" />
                   <span>Signing in...</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-center space-x-2">
                   <span>Sign In</span>
                   <ArrowRight className="h-4 w-4" />
                 </div>

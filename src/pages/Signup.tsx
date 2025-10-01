@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +14,11 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: ""
+    role: "user" // Default role to 'user'
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -37,14 +38,44 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    // Simulate signup process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Destructure the data, excluding confirmPassword
+      const { name, email, password, role } = formData;
+      
+      // This is the real API call to the backend. It replaces the simulation.
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password, role }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // If the server responds with an error, throw it to the catch block
+        throw new Error(data.message || 'Failed to sign up');
+      }
+
+      // On success, show a confirmation toast and redirect to the login page
       toast({
         title: "Account Created Successfully",
-        description: "Welcome to GrievancePortal! You can now submit and track complaints.",
+        description: "Welcome! Please log in to continue.",
       });
-    }, 2000);
+      navigate('/login');
+
+    } catch (err: any) {
+      // Display any errors from the API call in a toast
+      toast({
+        title: "Signup Failed",
+        description: err.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      // Ensure the loading state is turned off, whether the call succeeds or fails
+      setIsLoading(false);
+    }
   };
 
   return (

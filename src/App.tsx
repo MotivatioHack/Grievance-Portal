@@ -8,7 +8,7 @@ import Footer from "@/components/layout/Footer";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
-import ComplaintForm from "@/pages/ComplaintForm";
+import ComplaintForm from "@/pages/complaint-form";
 import AdminDashboard from "@/pages/AdminDashboard";
 import TrackComplaint from "@/pages/TrackComplaint";
 import NotFound from "@/pages/NotFound";

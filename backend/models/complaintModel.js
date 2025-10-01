@@ -1,16 +1,38 @@
 const db = require('../config/db');
 
+const generateComplaintId = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `GRP-${timestamp}-${randomPart}`;
+};
+
 const Complaint = {
-  create: async (user_id, title, description, priority) => {
+  create: async (complaintData) => {
+    const { user_id, title, category, description, priority } = complaintData;
+    const complaint_id = generateComplaintId();
     const [result] = await db.query(
-      'INSERT INTO complaints (user_id, title, description, priority) VALUES (?, ?, ?, ?)',
-      [user_id, title, description, priority]
+      'INSERT INTO complaints (user_id, complaint_id, title, category, description, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [user_id, complaint_id, title, category, description, priority, 'new']
     );
-    return result.insertId;
+    return complaint_id;
   },
 
+  // --- UPDATE THIS FUNCTION ---
+  // This now joins with the users table to get the submitter's name.
   getAll: async () => {
-    const [rows] = await db.query('SELECT * FROM complaints');
+    const [rows] = await db.query(`
+      SELECT 
+        c.complaint_id, 
+        c.title, 
+        c.category, 
+        c.priority, 
+        c.status, 
+        c.created_at, 
+        COALESCE(u.name, 'Anonymous') as submittedBy 
+      FROM complaints c
+      LEFT JOIN users u ON c.user_id = u.id
+      ORDER BY c.created_at DESC
+    `);
     return rows;
   },
 
