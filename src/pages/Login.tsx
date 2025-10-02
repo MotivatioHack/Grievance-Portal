@@ -42,7 +42,7 @@ const Login = () => {
       });
 
       if (data.role === 'admin') {
-        navigate('/admin-dashboard');
+        navigate('/admin');
       } else {
         // --- THIS IS THE CORRECTED LINE ---
         // Changed from '/complaint-form' to the correct route '/complaint'

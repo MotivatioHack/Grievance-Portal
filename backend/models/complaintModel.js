@@ -12,13 +12,11 @@ const Complaint = {
     const complaint_id = generateComplaintId();
     const [result] = await db.query(
       'INSERT INTO complaints (user_id, complaint_id, title, category, description, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [user_id, complaint_id, title, category, description, priority, 'new']
+      [user_id, complaint_id, title, category, description, priority, 'pending']
     );
     return complaint_id;
   },
 
-  // --- UPDATE THIS FUNCTION ---
-  // This now joins with the users table to get the submitter's name.
   getAll: async () => {
     const [rows] = await db.query(`
       SELECT 
@@ -39,6 +37,13 @@ const Complaint = {
   getByUserId: async (user_id) => {
     const [rows] = await db.query('SELECT * FROM complaints WHERE user_id = ?', [user_id]);
     return rows;
+  },
+
+  // --- ADDED FUNCTION ---
+  // Gets a single complaint by its public-facing complaint_id
+  getById: async (complaint_id) => {
+    const [rows] = await db.query('SELECT * FROM complaints WHERE complaint_id = ?', [complaint_id]);
+    return rows[0]; // Return the first result (the complaint object) or undefined if not found.
   },
 
   updateStatus: async (id, status, admin_comment = null) => {

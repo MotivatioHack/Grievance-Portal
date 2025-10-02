@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ interface ComplaintDetails {
   title: string;
   category: string;
   priority: "low" | "medium" | "high" | "urgent";
-  status: "new" | "in-progress" | "resolved" | "escalated";
+  status: "new" | "in-progress" | "resolved" | "escalated" | "pending" | "in_progress";
   submittedDate: string;
   submittedBy: string;
   description: string;
@@ -38,49 +39,11 @@ interface ComplaintDetails {
 }
 
 const TrackComplaint = () => {
-  const [complaintId, setComplaintId] = useState("");
+  const location = useLocation();
+  const [complaintId, setComplaintId] = useState(location.state?.complaintId || "");
   const [complaint, setComplaint] = useState<ComplaintDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-
-  // Mock complaint data
-  const mockComplaint: ComplaintDetails = {
-    id: "GRP-ABC123",
-    title: "Poor Service Quality in Cafeteria",
-    category: "Service Quality",
-    priority: "medium",
-    status: "in-progress",
-    submittedDate: "2024-01-15",
-    submittedBy: "John Doe",
-    description: "The food quality in the cafeteria has been consistently poor over the past week. The vegetables appear stale, and the service is extremely slow. This is affecting the dining experience for all employees.",
-    assignedTo: "Operations Team",
-    timeline: [
-      {
-        status: "Complaint Submitted",
-        comment: "New complaint received and logged into the system",
-        timestamp: "2024-01-15 09:30 AM",
-        updatedBy: "System"
-      },
-      {
-        status: "Under Review",
-        comment: "Complaint assigned to Operations Team for investigation",
-        timestamp: "2024-01-15 02:15 PM",
-        updatedBy: "Admin Team"
-      },
-      {
-        status: "Investigation Started",
-        comment: "Site visit conducted to assess cafeteria conditions. Speaking with kitchen staff and management.",
-        timestamp: "2024-01-16 11:00 AM",
-        updatedBy: "Operations Team"
-      },
-      {
-        status: "Progress Update",
-        comment: "Identified issues with food supplier. Working on solution and temporary quality improvements.",
-        timestamp: "2024-01-17 03:45 PM",
-        updatedBy: "Operations Team"
-      }
-    ]
-  };
 
   const handleSearch = async () => {
     if (!complaintId.trim()) {
@@ -93,26 +56,60 @@ const TrackComplaint = () => {
     }
 
     setIsLoading(true);
+    setComplaint(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      if (complaintId.toUpperCase() === "GRP-ABC123") {
-        setComplaint(mockComplaint);
-        toast({
-          title: "Complaint Found",
-          description: "Your complaint details have been loaded successfully.",
-        });
-      } else {
-        setComplaint(null);
-        toast({
-          title: "Complaint Not Found",
-          description: "Please check your complaint ID and try again.",
-          variant: "destructive",
-        });
+    try {
+      const response = await fetch(`/api/complaints/${complaintId.trim()}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Complaint not found.');
       }
-    }, 1500);
+
+      const formattedComplaint: ComplaintDetails = {
+        id: data.complaint_id,
+        title: data.title,
+        category: data.category,
+        priority: data.priority,
+        status: data.status,
+        submittedDate: new Date(data.created_at).toLocaleDateString(),
+        submittedBy: data.user_id ? `User ID: ${data.user_id}` : 'Anonymous',
+        description: data.description,
+        assignedTo: data.assigned_to || 'Not yet assigned',
+        timeline: [
+          {
+            status: "Complaint Submitted",
+            comment: data.admin_comment || "New complaint received and logged into the system.",
+            timestamp: new Date(data.created_at).toLocaleString(),
+            updatedBy: "System"
+          }
+        ]
+      };
+
+      setComplaint(formattedComplaint);
+      toast({
+        title: "Complaint Found",
+        description: "Your complaint details have been loaded successfully.",
+      });
+
+    } catch (err: any) {
+      setComplaint(null);
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred. Please check the ID and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (location.state?.complaintId) {
+      handleSearch();
+    }
+  }, [location.state?.complaintId]);
+
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -128,10 +125,12 @@ const TrackComplaint = () => {
     switch (status.toLowerCase()) {
       case "complaint submitted":
       case "new":
+      case "pending":
         return <FileText className="h-4 w-4 text-primary" />;
       case "under review":
       case "investigation started":
       case "in-progress":
+      case "in_progress":
         return <Clock className="h-4 w-4 text-warning" />;
       case "resolved":
         return <CheckCircle className="h-4 w-4 text-accent" />;
@@ -162,9 +161,8 @@ const TrackComplaint = () => {
           </p>
         </div>
 
-        {/* Search Section */}
         <GlassCard className="animate-slide-up" glow={true}>
-          <div className="space-y-6">
+          <div className="p-6 space-y-6">
             <div className="space-y-2">
               <Label htmlFor="complaintId" className="text-foreground font-medium text-lg">
                 Complaint ID
@@ -178,7 +176,7 @@ const TrackComplaint = () => {
                     value={complaintId}
                     onChange={(e) => setComplaintId(e.target.value)}
                     className="pl-10 glass border-primary/30 focus:border-primary focus:shadow-neon transition-all duration-300 text-lg py-6"
-                    placeholder="Enter your complaint ID (e.g., GRP-ABC123)"
+                    placeholder="Enter your complaint ID"
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
@@ -201,23 +199,13 @@ const TrackComplaint = () => {
                 </Button>
               </div>
             </div>
-
-            <div className="text-sm text-muted-foreground">
-              <p className="mb-2">
-              </p>
-              <p>
-                Your complaint ID was provided when you submitted your complaint. Check your email or saved confirmation.
-              </p>
-            </div>
           </div>
         </GlassCard>
 
-        {/* Complaint Details */}
         {complaint && (
           <div className="space-y-6 animate-fade-in">
-            {/* Basic Info */}
             <GlassCard>
-              <div className="space-y-4">
+              <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-foreground">
                     Complaint Details
@@ -257,7 +245,7 @@ const TrackComplaint = () => {
                     <div>
                       <span className="text-sm text-muted-foreground">Current Status</span>
                       <p className="text-lg font-medium text-foreground">
-                        {complaint.status.replace('-', ' ').toUpperCase()}
+                        {complaint.status.replace('_', ' ').toUpperCase()}
                       </p>
                     </div>
                     <div>
@@ -283,9 +271,8 @@ const TrackComplaint = () => {
               </div>
             </GlassCard>
 
-            {/* Timeline */}
             <GlassCard>
-              <div className="space-y-6">
+              <div className="p-6 space-y-6">
                 <h3 className="text-xl font-bold text-foreground">
                   Status Timeline
                 </h3>
@@ -305,7 +292,7 @@ const TrackComplaint = () => {
                       <div className="flex-1 space-y-2 pb-8">
                         <div className="flex items-center justify-between">
                           <h4 className="font-semibold text-foreground">
-                            {item.status}
+                            {item.status.replace('_', ' ')}
                           </h4>
                           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                             <Calendar className="h-3 w-3" />
